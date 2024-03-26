@@ -1,0 +1,9 @@
+load_from:
+  - grpc_server:
+      host: user_code_1
+      port: 4000
+      location_name: "example_user_code_1"
+  - grpc_server:
+      host: user_code_2
+      port: 4000
+      location_name: "example_user_code_2"

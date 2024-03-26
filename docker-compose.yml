@@ -1,0 +1,83 @@
+services:
+  db:
+    image: postgres:11
+    environment:
+      POSTGRES_USER: "postgres_user"
+      POSTGRES_PASSWORD: "postgres_password"
+      POSTGRES_DB: "postgres_db"
+    volumes:
+      - db:/var/lib/postgresql/data
+  user_code_1:
+    image: ghcr.io/imperialcollegelondon/so-dagster-test-workflow:main
+    restart: always
+    environment:
+      DAGSTER_PG_USERNAME: "postgres_user"
+      DAGSTER_PG_PASSWORD: "postgres_password"
+      DAGSTER_PG_DB: "postgres_db"
+      DAGSTER_PG_HOST: "db"
+      DAGSTER_CURRENT_IMAGE: "ghcr.io/imperialcollegelondon/so-dagster-test-workflow:main"
+      WORKFLOW_VAR: 1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+  user_code_2:
+    image: ghcr.io/imperialcollegelondon/so-dagster-test-workflow:main
+    restart: always
+    environment:
+      DAGSTER_PG_USERNAME: "postgres_user"
+      DAGSTER_PG_PASSWORD: "postgres_password"
+      DAGSTER_PG_DB: "postgres_db"
+      DAGSTER_CURRENT_IMAGE: "ghcr.io/imperialcollegelondon/so-dagster-test-workflow:main"
+      DAGSTER_PG_HOST: "db"
+      WORKFLOW_VAR: 2
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+  webserver:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    entrypoint:
+      - dagster-webserver
+      - -h
+      - "0.0.0.0"
+      - -p
+      - "3000"
+      - -w
+      - workspace.yaml
+    expose:
+      - "3000"
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      DAGSTER_PG_USERNAME: "postgres_user"
+      DAGSTER_PG_PASSWORD: "postgres_password"
+      DAGSTER_PG_DB: "postgres_db"
+      DAGSTER_PG_HOST: "db"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/io_manager_storage:/tmp/io_manager_storage
+    depends_on:
+      - db
+      - user_code_1
+      - user_code_2
+  daemon:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    entrypoint:
+      - dagster-daemon
+      - run
+    restart: on-failure
+    environment:
+      DAGSTER_PG_USERNAME: "postgres_user"
+      DAGSTER_PG_PASSWORD: "postgres_password"
+      DAGSTER_PG_DB: "postgres_db"
+      DAGSTER_PG_HOST: "db"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/io_manager_storage:/tmp/io_manager_storage
+    depends_on:
+      - db
+      - user_code_1
+      - user_code_2
+volumes:
+  db:
